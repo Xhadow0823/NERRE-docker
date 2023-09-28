@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> 實體關係提取工具 </title>
+
+    <style>
+        .error-blue {
+            background-color: #003c94;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <h1> 實體關係提取工具 </h1>
+    <textarea style="width: 90%;" id="text-input-str" rows="10">約翰西拿是中國人，約翰西拿喜歡吃冰淇淋，河助教喜歡吃西瓜。</textarea>
+    <br> or
+    <input type="file" id="text-input-file">
+    
+    <hr>
+    <button id="btn-submit"> 開始提取 </button>
+    <span style="margin-left: 50px;" id="status"><!-- 進度狀態 --></span>
+
+    <div id="div-result" hidden>
+        <hr>
+        處理結果: <br>
+        <textarea style="width: 90%;" id="result-ta" rows="10"></textarea>
+        <br>
+        <div id="div-result-files"></div>
+        <button id="btn-result-download">下載</button>
+    </div>
+
+    <div id="history">
+        <hr>
+        <span>歷史結果:</span>
+        <ul id="history-result-list">
+            <li>example.csv <a href="/">download</a></li>
+        </ul>
+    </div>
+
+    <script>
+        // elements
+        let btnStart = document.querySelector("#btn-submit");
+        let textInputStr = document.querySelector("#text-input-str");
+        let textInputFile = document.querySelector("#text-input-file");
+        let resultTextarea = document.querySelector("#result-ta");
+        let btnDownloadResult = document.querySelector("#btn-result-download");
+        let historyList = document.querySelector("#history-result-list");
+
+        let resultDiv = document.querySelector("#div-result");
+        let resultFilesDiv = document.querySelector("#div-result-files");
+        let statusSpan = document.querySelector("#status");
+
+        const readFromFile = async (file) => {
+            let fr = new FileReader();
+            return new Promise((resolve) => {
+                fr.onload = () => {
+                    // console.log( fr.result );
+                    resolve(fr.result)
+                };
+                fr.readAsText(file)
+            });
+        }
+
+        const getInputText = () => {
+            return new Promise((resolve, reject) => {
+                if (textInputStr.value.trim() != "") {
+                    textInputFile.value = "";
+                    resolve(textInputStr.value.trim())
+                }else if (textInputFile.value != "") {
+                    textInputStr.vaule = "";
+                    readFromFile(textInputFile.files[0]).then(resolve);
+                }else{
+                    // console.warn("NO INPUT");
+                    reject("NO INPUT DATA");
+                }
+            });
+        };
+
+        const setStatus = (statusText) => {
+            statusSpan.innerText = statusText;
+            if (statusText == "處理中...") {
+                btnStart.disabled = true;
+            }else {
+                btnStart.disabled = false;
+            }
+            if (statusText.includes("錯誤")) {
+                statusSpan.classList.add("error-blue");
+            }else {
+                statusSpan.classList.remove("error-blue");
+            }
+        }
+        let outputFiles = [];
+        const createResultLink = () => {
+            resultFilesDiv.innerHTML = "";
+            for(let file of outputFiles) {
+                let a = document.createElement('a');
+                a.href = `download/${file}`;
+                a.setAttribute("download", true);
+                resultFilesDiv.appendChild(a);
+                a.click();
+            }
+        };
+
+        const submit = async (text) => {
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/submit", true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            setStatus("處理中...");
+            return new Promise((resolve) => {
+                xhr.onreadystatechange = () => {
+                    if (xhr.readyState != 4) return;
+                    if (xhr.status == 200) {
+                        let data = xhr.responseText;
+                        console.log(data);
+                        let { output } = JSON.parse(data);
+                        outputFiles = output;
+                        setStatus("處理完成");
+                        resultDiv.hidden = false;
+                        resultTextarea.value = data;
+                        resolve(data);
+                    } else {  // error
+                        console.log(`response status code: ${xhr.status}`);
+                        setStatus("\n:( \n 發生錯誤，請稍後再嘗試");
+                    }
+                };
+                xhr.send(JSON.stringify({
+                    text: text
+                }));
+            });
+        }
+
+        function updateHistoryResultList() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "/history/results", true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState != 4) return;
+                if (xhr.status == 200) {
+                    let resultList = JSON.parse(xhr.responseText);
+                    const baseURL = "/download/";
+                    resultList.forEach(resultFile => {
+                        historyList.innerHTML += `
+                        <li>${resultFile} <a href="${baseURL+resultFile}">💾</a></li>
+                        `;
+                    });
+                }
+            };
+            historyList.innerHTML = ""
+            xhr.send();
+        }
+
+        // routines
+        btnStart.addEventListener("click", () => {
+            getInputText().then(submit);
+        });
+        btnDownloadResult.addEventListener("click", () => {
+            // confirm("這個功能還沒做喔~");
+            createResultLink();
+        });
+
+        updateHistoryResultList();
+
+    </script>
+</body>
+</html>
