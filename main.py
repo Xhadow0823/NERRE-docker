@@ -21,7 +21,9 @@ def submit():
         return response
     except Exception as e:
         print(e)
-        return abort(500)
+        if "OPENAI_API_KEY" in str(e):
+            print("KEY error")
+        return abort(500, str(e)) if "OPENAI_API_KEY" in str(e) else abort(500)
 
 @app.route("/history/results")
 def history_result():

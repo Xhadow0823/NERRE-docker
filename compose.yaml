@@ -1,1 +1,10 @@
 # yaml 用來建立 image 並啟動系統
+version: "1.0"
+services:
+  nerre:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    container_name: nerre-flask

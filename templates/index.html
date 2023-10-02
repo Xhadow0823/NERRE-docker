@@ -118,7 +118,8 @@
                         outputFiles = output;
                         setStatus("處理完成");
                         resultDiv.hidden = false;
-                        resultTextarea.value = data;
+                        let formatedData = JSON.stringify(JSON.parse(data), null, 2);
+                        resultTextarea.value = formatedData;
                         resolve(data);
                     } else {  // error
                         console.log(`response status code: ${xhr.status}`);
