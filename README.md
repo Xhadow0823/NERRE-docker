@@ -26,7 +26,7 @@
       若使用記事本開就會正常呈現實體與關係
   - 歷史結果是會統整出之前所提取的紀錄，可點擊進行下載
 - Example
-  - 
+  - ![example1](example1.gif)
 
 ## misc
 + http://{url_of_your_location}:5000
